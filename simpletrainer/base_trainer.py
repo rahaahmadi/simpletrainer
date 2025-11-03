@@ -3,6 +3,7 @@ import wandb
 import numpy as np
 from simpletrainer.metrics import binary_metrics, multiclass_metrics, regression_metrics, multilabel_metrics
 from simpletrainer.utils import save_model, load_model
+from tqdm import tqdm
 
 class BaseTrainer:
     SUPPORTED_TASKS = ["binary", "multiclass", "multilabel", "regression"]
@@ -25,7 +26,8 @@ class BaseTrainer:
 
         self.early_stopping_patience = early_stopping_patience
         self.epochs_no_improve = 0
-        self.grad_clip = grad_clip 
+        self.grad_clip = grad_clip
+        self.best_metrics = None
         
         if wandb_project:
             wandb.init(project=wandb_project, name=wandb_name,config=wandb_config, save_code=False)
@@ -36,10 +38,24 @@ class BaseTrainer:
         total_loss = 0
         all_labels, all_outputs = [], []
 
-        for x, y in self.train_loader:
+        for x, y in tqdm(self.train_loader):
             x, y = x.to(self.device), y.to(self.device)
             self.optimizer.zero_grad()
             output = self.model(x)
+            if isinstance(self.criterion, torch.nn.BCEWithLogitsLoss):
+                # expects (B,) or (B,C) for multilabel
+                if output.ndim == 2 and output.shape[1] == 1:
+                    output = output.view(-1)
+            elif isinstance(self.criterion, torch.nn.CrossEntropyLoss):
+                # expects (B,C) and labels (B,)
+                if output.ndim == 1 or output.shape[1] == 1:
+                    output = torch.cat([1-output, output], dim=1)  # convert to 2-class logits
+            elif isinstance(self.criterion, torch.nn.MSELoss):
+                # expects (B,) and labels (B,)
+                if output.ndim == 2 and output.shape[1] == 1:
+                    output = output.view(-1)
+                if y.ndim == 2 and y.shape[1] == 1:
+                    y = y.view(-1)
             loss = self.criterion(output, y)
             loss.backward()
             if self.grad_clip is not None:
@@ -57,16 +73,35 @@ class BaseTrainer:
 
     def validate(self):
         self.model.eval()
+        total_loss = 0
         all_labels, all_outputs = [], []
 
         with torch.no_grad():
-            for x, y in self.test_loader:
+            for x, y in tqdm(self.test_loader):
                 x, y = x.to(self.device), y.to(self.device)
                 output = self.model(x)
-                all_labels.extend(y.cpu().numpy())
-                all_outputs.extend(output.cpu().numpy())
 
-        return self.compute_metrics(all_labels, all_outputs)
+                if isinstance(self.criterion, torch.nn.BCEWithLogitsLoss):
+                    if output.ndim == 2 and output.shape[1] == 1:
+                        output = output.view(-1)
+                elif isinstance(self.criterion, torch.nn.CrossEntropyLoss):
+                    if output.ndim == 1 or output.shape[1] == 1:
+                        output = torch.cat([1 - output, output], dim=1)
+                elif isinstance(self.criterion, torch.nn.MSELoss):
+                    if output.ndim == 2 and output.shape[1] == 1:
+                        output = output.view(-1)
+                    if y.ndim == 2 and y.shape[1] == 1:
+                        y = y.view(-1)
+
+                loss = self.criterion(output, y)
+                total_loss += loss.item() * y.size(0)
+                all_labels.extend(y.cpu().numpy())
+                all_outputs.extend(output.detach().cpu().numpy())
+                
+        avg_loss = total_loss / len(self.test_loader.dataset)
+        metrics = self.compute_metrics(all_labels, all_outputs)
+        metrics["loss"] = avg_loss
+        return metrics
 
     def compute_metrics(self, labels, outputs, use_optimal_threshold=True):
         if self.task_type == "binary":
@@ -93,7 +128,6 @@ class BaseTrainer:
     def fit(self, num_epochs, save_path=None):
         best_val_metric = -np.inf if self.task_type != "regression" else np.inf
         best_epoch = -1
-        best_metrics = None
 
         for epoch in range(num_epochs):
             train_metrics = self.train()
@@ -113,14 +147,15 @@ class BaseTrainer:
             if is_best:
                 best_val_metric = key_metric_value
                 best_epoch = epoch
-                best_metrics = val_metrics
-                self.epochs_no_improve = 0
+                self.best_metrics = val_metrics
+                self._epochs_no_improve = 0
                 if save_path:
                     self.save_model(f"{save_path}_best.pth", wandb_save=True)
             else:
                 self.epochs_no_improve += 1
+                print(f"No improvement for {self.epochs_no_improve} epochs.")
             
-            if self.early_stopping_patience and self.epochs_no_improve >= self.early_stopping_patience:
+            if self.early_stopping_patience and self._epochs_no_improve >= self.early_stopping_patience:
                 print(f"⚠️ Early stopping triggered at epoch {epoch}")
                 break
 
@@ -133,10 +168,10 @@ class BaseTrainer:
             if wandb.run:
                 wandb.log(log_dict)
 
-            print(f"Epoch {epoch}: Train {train_metrics}, Val {val_metrics}")
+            print(f"Epoch {epoch}: Train {train_metrics}, Val {val_metrics}\n")
 
-        print(f"Best epoch: {best_epoch}, Best val metric: {best_val_metric:.4f}")
-        return best_epoch, best_metrics
+        print(f"Best epoch: {best_epoch}, Best val metric: {self.best_metrics}")
+        return best_epoch, self.best_metrics
 
 
     def save_model(self, path):
