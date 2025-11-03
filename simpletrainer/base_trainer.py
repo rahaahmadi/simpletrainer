@@ -2,8 +2,8 @@ import torch
 import os
 import wandb
 import numpy as np
-from trainers.metrics import binary_metrics, multiclass_metrics, regression_metrics, multilabel_metrics
-from trainers.utils import save_model, load_model
+from simpletrainer.metrics import binary_metrics, multiclass_metrics, regression_metrics, multilabel_metrics
+from simpletrainer.utils import save_model, load_model
 
 class BaseTrainer:
     SUPPORTED_TASKS = ["binary", "multiclass", "multilabel", "regression"]
