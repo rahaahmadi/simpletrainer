@@ -1,5 +1,4 @@
 import torch
-import os
 import wandb
 import numpy as np
 from simpletrainer.metrics import binary_metrics, multiclass_metrics, regression_metrics, multilabel_metrics
@@ -115,13 +114,13 @@ class BaseTrainer:
                 best_val_metric = key_metric_value
                 best_epoch = epoch
                 best_metrics = val_metrics
-                self._epochs_no_improve = 0
+                self.epochs_no_improve = 0
                 if save_path:
                     self.save_model(f"{save_path}_best.pth", wandb_save=True)
             else:
                 self.epochs_no_improve += 1
             
-            if self.early_stopping_patience and self._epochs_no_improve >= self.early_stopping_patience:
+            if self.early_stopping_patience and self.epochs_no_improve >= self.early_stopping_patience:
                 print(f"⚠️ Early stopping triggered at epoch {epoch}")
                 break
 
