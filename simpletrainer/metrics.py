@@ -1,7 +1,7 @@
 import numpy as np
 from sklearn.metrics import (
     roc_auc_score, precision_score, recall_score, f1_score, confusion_matrix,
-    mean_squared_error, r2_score, accuracy_score
+    mean_squared_error, r2_score, accuracy_score, roc_curve
 )
 
 def binary_metrics(labels, outputs, use_optimal_threshold=True):
@@ -18,7 +18,6 @@ def binary_metrics(labels, outputs, use_optimal_threshold=True):
     auc = roc_auc_score(labels, probs) if len(set(labels)) > 1 else 0.5
 
     if use_optimal_threshold and len(set(labels)) > 1:
-        from sklearn.metrics import roc_curve
         fpr, tpr, thresholds = roc_curve(labels, probs)
         threshold = thresholds[np.argmax(tpr - fpr)]
     else:
@@ -65,6 +64,7 @@ def regression_metrics(labels, outputs):
     return {"mse": mse, "rmse": rmse, "r2": r2, "loss": mse}
 
 def multilabel_metrics(labels, outputs, threshold=0.5):
+    outputs = np.array(outputs) 
     probs = 1 / (1 + np.exp(-outputs)) if outputs.max() > 1 else outputs
     preds = (probs >= threshold).astype(int)
     
