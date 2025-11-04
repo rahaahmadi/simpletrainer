@@ -3,8 +3,8 @@ requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "simpletrainer"
-version = "0.1.0"
+name = "torch-simpletrainer"
+version = "0.1.1"
 description = "A simple, flexible training framework for PyTorch models."
 authors = [
   { name="Raha Ahmadi" }
