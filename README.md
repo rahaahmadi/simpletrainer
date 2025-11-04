@@ -7,11 +7,13 @@
 
 ## 🧩 Installation
 
+> **Install name:** `torch-simpletrainer` • **Import name:** `simpletrainer`
+
 ### From PyPI
 > Install the correct **PyTorch** build for your platform first
 ```bash
 
-pip install simpletrainer
+pip install torch-simpletrainer
 ```
 
 ### From source
