@@ -52,7 +52,7 @@ trainer = BaseTrainer(
     task_type="binary",
     early_stopping_patience=5,
     grad_clip=1.0,
-    wandb_project="my-project",
+    wandb_project="my-project", # optional
 )
 
 best_epoch, best_metrics = trainer.fit(num_epochs=25, save_path="checkpoints/run/model")
@@ -62,7 +62,7 @@ print("Best metrics:", best_metrics)
 
 ---
 
-## Features
+## ✨ Features
 
 - **Tasks:** `binary classification`, `multiclass classification`, `multilabel classification`, `regression`
 - **Metrics:** AUC / F1 / Accuracy (classification), MSE / MAE / R² (regression)
