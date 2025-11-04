@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "simpletrainer"
+version = "0.1.0"
+description = "A simple, flexible training framework for PyTorch models."
+authors = [
+  { name="Raha Ahmadi" }
+]
+license = { text = "MIT" }
+keywords = ["pytorch", "trainer", "training", "deep-learning", "machine-learning"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence"
+]
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+  "numpy",
+  "scikit-learn"
+]
+
+[project.optional-dependencies]
+torch = ["torch>=2.0"]
+wandb = ["wandb>=0.13"]
+
+
+[project.urls]
+Homepage = "https://github.com/rahaahmadi/simpletrainer.git"
+Repository = "https://github.com/rahaahmadi/simpletrainer.git"
+Issues = "https://github.com/rahaahmadi/simpletrainer/issues"
+
+[tool.setuptools.packages.find]
+include = ["simpletrainer*"]
